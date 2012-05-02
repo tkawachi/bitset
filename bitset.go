@@ -44,6 +44,8 @@ package bitset
 import (
 	"bytes"
 	"fmt"
+	"io"
+	"io/ioutil"
 	"math"
 )
 
@@ -364,4 +366,44 @@ func (b *BitSet) DumpAsBits() string {
 		fmt.Fprintf(buffer, "%032b.", b.set[i])
 	}
 	return string(buffer.Bytes())
+}
+
+// Write contents to file.
+// Note: Len() is not saved.
+func (b *BitSet) WriteTo(w io.Writer) (n int, err error) {
+	var buf []byte = make([]byte, 4)
+	szl := b.wordCount()
+	n = 0
+	for i, word := range b.set {
+		if uint(i) >= szl {
+			break
+		}
+		buf[0] = byte(word >> 24 & 0xFF)
+		buf[1] = byte(word >> 16 & 0xFF)
+		buf[2] = byte(word >> 8 & 0xFF)
+		buf[3] = byte(word & 0xFF)
+		cnt, err2 := w.Write(buf)
+		n += cnt
+		if err2 != nil {
+			err = err2
+			return
+		}
+	}
+	return
+}
+
+// Read contents from file.
+// Note: Len() is not saved.
+func ReadFrom(r io.Reader) (bs *BitSet, err error) {
+	buf, err2 := ioutil.ReadAll(r)
+	if err2 != nil {
+		err = err2
+		return
+	}
+	nBits := len(buf) * 8
+	bs = New(uint(nBits))
+	for i, b := range buf {
+		bs.set[i/4] += (uint32(b) & 0xFF) << uint(8*(3-(i%4)))
+	}
+	return
 }

@@ -7,6 +7,7 @@
 package bitset
 
 import (
+	"bytes"
 	"math"
 	"math/rand"
 	"testing"
@@ -444,6 +445,46 @@ func TestComplement(t *testing.T) {
 	b = a.Complement()
 	if b.Count() != 47 {
 		t.Errorf("Complement failed, size should be 47, but was %d", b.Count())
+	}
+}
+
+func TestWriteToReadFrom(t *testing.T) {
+	buf := new(bytes.Buffer)
+	a := New(100)
+	a.Set(0).Set(10).Set(99)
+	_, err := a.WriteTo(buf)
+	if err != nil {
+		t.Error("WriteTo failed:", err)
+	}
+	b, err := ReadFrom(buf)
+	if err != nil {
+		t.Error("ReadFrom failed:", err)
+	}
+	if a.Len() > b.Len() {
+		t.Error("Read BitSet should have equal or larger size")
+	}
+	if !(b.Test(0) && b.Test(10) && b.Test(99)) {
+		t.Error("ReadFrom construct different BitSet")
+	}
+}
+
+func TestWriteToReadFromBoundary(t *testing.T) {
+	buf := new(bytes.Buffer)
+	a := New(128)
+	a.Set(0).Set(10).Set(99).Set(127)
+	_, err := a.WriteTo(buf)
+	if err != nil {
+		t.Error("WriteTo failed:", err)
+	}
+	b, err := ReadFrom(buf)
+	if err != nil {
+		t.Error("ReadFrom failed:", err)
+	}
+	if a.Len() > b.Len() {
+		t.Error("Read BitSet should have equal or larger size")
+	}
+	if !(b.Test(0) && b.Test(10) && b.Test(99) && b.Test(127)) {
+		t.Error("ReadFrom construct different BitSet")
 	}
 }
 
